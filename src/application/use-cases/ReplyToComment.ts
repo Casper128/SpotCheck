@@ -6,10 +6,13 @@ import type { ReplyToCommentOutputDTO, GuestReviewerInputDTO } from "../dtos";
 import type { CanvasRepository } from "../ports/CanvasRepository";
 import type { Clock, IdGenerator } from "../ports/Runtime";
 import { resolveReviewer } from "../reviewerInput";
+import { normalizePageRoute } from "../../domain/normalizePageRoute";
+import { PinNotFoundError } from "../errors";
 
 export interface ReplyToCommentInputDTO {
   readonly canvasId: string;
   readonly pinId: string;
+  readonly pageRoute: string;
   readonly commentId: string;
   readonly author: GuestReviewerInputDTO;
   readonly body: string;
@@ -26,6 +29,9 @@ export class ReplyToComment {
     const canvas = await this.canvases.findById(input.canvasId);
     if (!canvas) {
       throw new CanvasNotFoundError(input.canvasId);
+    }
+    if (!canvas.pins.some((pin) => pin.id === input.pinId && pin.pageRoute === normalizePageRoute(input.pageRoute))) {
+      throw new PinNotFoundError(input.pinId);
     }
 
     const createdAt = this.clock.now();

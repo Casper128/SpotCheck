@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import type { PinPlacementMode } from "@/presentation/domInspectorProtocol";
 
 export type PinFilter = "open" | "resolved";
 
@@ -10,11 +11,11 @@ export interface GuestSession {
 }
 
 interface ReviewState {
-  readonly commentingEnabled: boolean;
+  readonly placementMode: PinPlacementMode;
   readonly selectedPinId: string | null;
   readonly filter: PinFilter;
   readonly reviewer: GuestSession | null;
-  setCommentingEnabled: (enabled: boolean) => void;
+  setPlacementMode: (mode: PinPlacementMode) => void;
   setSelectedPinId: (pinId: string | null) => void;
   setFilter: (filter: PinFilter) => void;
   setReviewer: (reviewer: GuestSession) => void;
@@ -22,11 +23,11 @@ interface ReviewState {
 }
 
 export const useReviewStore = create<ReviewState>((set) => ({
-  commentingEnabled: false,
+  placementMode: "off",
   selectedPinId: null,
   filter: "open",
   reviewer: null,
-  setCommentingEnabled: (commentingEnabled) => set({ commentingEnabled }),
+  setPlacementMode: (placementMode) => set({ placementMode }),
   setSelectedPinId: (selectedPinId) => set({ selectedPinId }),
   setFilter: (filter) => set({ filter }),
   setReviewer: (reviewer) => set({ reviewer }),

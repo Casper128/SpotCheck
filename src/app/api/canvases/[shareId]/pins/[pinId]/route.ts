@@ -3,6 +3,7 @@ import { apiError, RequestValidationError } from "@/presentation/server/apiError
 import { canvasRepository, useCases } from "@/presentation/server/dependencies";
 
 const resolveSchema = z.object({
+  pageRoute: z.string().trim().min(1).max(2048),
   resolvedBy: z.object({
     id: z.string().min(1).max(100),
     displayName: z.string().trim().min(1).max(80),
@@ -29,6 +30,7 @@ export async function PATCH(
     const pin = await useCases.resolvePin.execute({
       canvasId: canvas.id,
       pinId,
+      pageRoute: parsed.data.pageRoute,
       resolvedBy: {
         reviewerId: parsed.data.resolvedBy.id,
         displayName: parsed.data.resolvedBy.displayName,

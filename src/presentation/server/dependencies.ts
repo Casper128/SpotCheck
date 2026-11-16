@@ -1,4 +1,4 @@
-import { AddComment, AddPin, CreateCanvas, GetCanvas, ReplyToComment, ResolvePin } from "@/application";
+import { AddComment, AddPin, CreateCanvas, GetCanvas, GetPinsByRoute, ReplyToComment, ResolvePin } from "@/application";
 import { SystemClock } from "@/infrastructure/database/clock";
 import { RandomIdGenerator } from "@/infrastructure/database/ids";
 import { PrismaCanvasRepository } from "@/infrastructure/repositories/PrismaCanvasRepository";
@@ -12,6 +12,7 @@ export const useCases = {
   addPin: new AddPin(canvasRepository, ids, clock),
   createCanvas: new CreateCanvas(canvasRepository, ids, clock),
   getCanvas: new GetCanvas(canvasRepository),
+  getPinsByRoute: new GetPinsByRoute(canvasRepository, canvasRepository),
   replyToComment: new ReplyToComment(canvasRepository, ids, clock),
   resolvePin: new ResolvePin(canvasRepository, ids, clock),
 };

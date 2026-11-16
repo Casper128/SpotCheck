@@ -19,5 +19,14 @@ export default async function ReviewPage({
     }
     throw error;
   }
-  return <ReviewWorkspace canvas={canvas} />;
+  const configuredProxy = process.env.SPOTCHECK_PROXY_ORIGIN;
+  let proxyOrigin: string | null = null;
+  if (configuredProxy) {
+    const parsed = new URL(configuredProxy);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.origin !== configuredProxy) {
+      throw new Error("SPOTCHECK_PROXY_ORIGIN debe ser un origen HTTP(S) sin ruta.");
+    }
+    proxyOrigin = parsed.origin;
+  }
+  return <ReviewWorkspace canvas={canvas} proxyOrigin={proxyOrigin} />;
 }

@@ -3,6 +3,7 @@ import { apiError, RequestValidationError } from "@/presentation/server/apiError
 import { canvasRepository, useCases } from "@/presentation/server/dependencies";
 
 const commentSchema = z.object({
+  pageRoute: z.string().trim().min(1).max(2048),
   body: z.string().trim().min(1).max(5000),
   replyToCommentId: z.string().min(1).optional(),
   author: z.object({
@@ -31,6 +32,7 @@ export async function POST(
     const input = {
       canvasId: canvas.id,
       pinId,
+      pageRoute: parsed.data.pageRoute,
       author: { reviewerId: parsed.data.author.id, displayName: parsed.data.author.displayName },
       body: parsed.data.body,
     };

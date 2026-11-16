@@ -1,4 +1,6 @@
 export * from "./errors";
+export * from "./normalizePageRoute";
+export * from "./nextPinNumber";
 export * from "./entities/BrowserMetadata";
 export * from "./entities/Canvas";
 export * from "./entities/Comment";

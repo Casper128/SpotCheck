@@ -1,7 +1,8 @@
 export type ApplicationErrorCode =
   | "CANVAS_NOT_FOUND"
   | "CANVAS_ALREADY_EXISTS"
-  | "CONCURRENT_CANVAS_UPDATE";
+  | "CONCURRENT_CANVAS_UPDATE"
+  | "PIN_NOT_FOUND";
 
 export class ApplicationError extends Error {
   constructor(
@@ -31,5 +32,12 @@ export class ConcurrentCanvasUpdateError extends ApplicationError {
   constructor(canvasId: string) {
     super(`Canvas "${canvasId}" changed before the update could be saved.`, "CONCURRENT_CANVAS_UPDATE");
     this.name = "ConcurrentCanvasUpdateError";
+  }
+}
+
+export class PinNotFoundError extends ApplicationError {
+  constructor(pinId: string) {
+    super(`Pin "${pinId}" was not found on the requested page.`, "PIN_NOT_FOUND");
+    this.name = "PinNotFoundError";
   }
 }

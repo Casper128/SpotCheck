@@ -7,6 +7,10 @@ export interface PinSnapshotMetadata {
     readonly width: number;
     readonly height: number;
   };
+  readonly scrollOffset?: {
+    readonly x: number;
+    readonly y: number;
+  };
   readonly browser: {
     readonly name: string;
     readonly version?: string;
@@ -50,6 +54,11 @@ export function createPinSnapshotMetadata(
 
   assertPositiveFinite(attributes.viewport.width, "snapshot.viewport.width");
   assertPositiveFinite(attributes.viewport.height, "snapshot.viewport.height");
+  if (attributes.scrollOffset !== undefined) {
+    assertRecord(attributes.scrollOffset, "snapshot.scrollOffset");
+    assertFiniteScroll(attributes.scrollOffset.x, "snapshot.scrollOffset.x");
+    assertFiniteScroll(attributes.scrollOffset.y, "snapshot.scrollOffset.y");
+  }
 
   const browserName = validateLabel(attributes.browser.name, "snapshot.browser.name", 100);
   const operatingSystemName = validateLabel(
@@ -70,6 +79,9 @@ export function createPinSnapshotMetadata(
       width: attributes.viewport.width,
       height: attributes.viewport.height,
     },
+    ...(attributes.scrollOffset === undefined
+      ? {}
+      : { scrollOffset: { x: attributes.scrollOffset.x, y: attributes.scrollOffset.y } }),
     browser: {
       name: browserName,
       ...(browserVersion === undefined ? {} : { version: browserVersion }),
@@ -84,6 +96,12 @@ export function createPinSnapshotMetadata(
 function assertPositiveFinite(value: number, field: string): void {
   if (!Number.isFinite(value) || value <= 0) {
     throw new DomainError(`${field} must be a positive finite number.`, "INVALID_VALUE", field);
+  }
+}
+
+function assertFiniteScroll(value: number, field: string): void {
+  if (!Number.isFinite(value) || Math.abs(value) > 100_000) {
+    throw new DomainError(`${field} must be a finite scroll offset within 100000 pixels.`, "INVALID_VALUE", field);
   }
 }
 

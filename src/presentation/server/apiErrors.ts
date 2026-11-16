@@ -20,7 +20,8 @@ export function apiError(error: unknown): Response {
     return Response.json({ error: "El proyecto cambió mientras guardábamos. Inténtalo otra vez." }, { status: 409 });
   }
   if (error instanceof ApplicationError) {
-    return Response.json({ error: error.message }, { status: error.code === "CANVAS_NOT_FOUND" ? 404 : 409 });
+    const status = error.code === "CANVAS_NOT_FOUND" || error.code === "PIN_NOT_FOUND" ? 404 : 409;
+    return Response.json({ error: error.message }, { status });
   }
 
   console.error("API request failed:", error);

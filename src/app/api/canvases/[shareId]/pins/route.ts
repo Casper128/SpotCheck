@@ -10,6 +10,12 @@ const reviewerSchema = z.object({
 const pinSchema = z.object({
   x: z.number().finite().min(0).max(1),
   y: z.number().finite().min(0).max(1),
+  pageRoute: z.string().trim().min(1).max(2048),
+  domAnchor: z.object({
+    selector: z.string().min(1).max(1200).refine((value) => value.trim().length > 0),
+    offsetX: z.number().finite().min(0).max(1),
+    offsetY: z.number().finite().min(0).max(1),
+  }).optional(),
   author: reviewerSchema,
   snapshot: z.object({
     reviewedUrl: z.string().url(),
@@ -17,6 +23,10 @@ const pinSchema = z.object({
       width: z.number().positive(),
       height: z.number().positive(),
     }),
+    scrollOffset: z.object({
+      x: z.number().finite().min(-100_000).max(100_000),
+      y: z.number().finite().min(-100_000).max(100_000),
+    }).optional(),
     browser: z.object({
       name: z.string().trim().min(1).max(100),
       version: z.string().trim().max(50).optional(),
@@ -50,6 +60,8 @@ export async function POST(
       canvasId: canvas.id,
       x: parsed.data.x,
       y: parsed.data.y,
+      pageRoute: parsed.data.pageRoute,
+      ...(parsed.data.domAnchor ? { domAnchor: parsed.data.domAnchor } : {}),
       snapshot: parsed.data.snapshot,
       author: { reviewerId: parsed.data.author.id, displayName: parsed.data.author.displayName },
     });

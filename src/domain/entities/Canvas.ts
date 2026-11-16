@@ -45,6 +45,13 @@ export function addPinToCanvas(canvas: Canvas, pin: Pin, updatedAt: string): Can
   if (canvas.pins.some((existing) => existing.id === pin.id)) {
     throw new DomainError("A pin with this id already exists on the canvas.", "DUPLICATE_ID", "pin.id");
   }
+  if (canvas.pins.some((existing) => existing.pinNumber === pin.pinNumber)) {
+    throw new DomainError("Pin numbers must be unique on a canvas.", "DUPLICATE_ID", "pin.pinNumber");
+  }
+  const highestPinNumber = canvas.pins.reduce((highest, existing) => Math.max(highest, existing.pinNumber), 0);
+  if (pin.pinNumber <= highestPinNumber) {
+    throw new DomainError("Pin numbers must increase monotonically on a canvas.", "INVALID_VALUE", "pin.pinNumber");
+  }
   if (Date.parse(pin.createdAt) < Date.parse(canvas.createdAt)) {
     throw new DomainError("pin.createdAt cannot precede canvas.createdAt.", "INVALID_VALUE", "pin.createdAt");
   }

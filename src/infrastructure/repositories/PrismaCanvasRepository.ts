@@ -1,5 +1,6 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import type { ICommentRepository, IPinRepository } from "@/domain/repositories";
+import type { PinsByRouteQuery } from "@/application/ports/PinsByRouteQuery";
 import {
   createBrowserMetadata,
   createCanvas,
@@ -16,15 +17,17 @@ import type { CanvasRepository } from "@/application/ports/CanvasRepository";
 import { prisma } from "@/infrastructure/database/prisma";
 
 const canvasWithPins = {
-  pins: { include: { comments: { orderBy: { createdAt: "asc" as const } } } },
+  pins: { orderBy: { pinNumber: "asc" as const }, include: { comments: { orderBy: { createdAt: "asc" as const } } } },
 } satisfies Prisma.CanvasInclude;
 
 type PrismaCanvas = Prisma.CanvasGetPayload<{ include: typeof canvasWithPins }>;
 
-export class PrismaCanvasRepository implements CanvasRepository, IPinRepository, ICommentRepository {
+export class PrismaCanvasRepository implements CanvasRepository, PinsByRouteQuery, IPinRepository, ICommentRepository {
+  constructor(private readonly database: PrismaClient = prisma) {}
+
   async create(canvas: Canvas): Promise<void> {
     const source = canvas.imageSource;
-    await prisma.canvas.create({
+    await this.database.canvas.create({
       data: {
         id: canvas.id,
         shareId: canvas.shareId,
@@ -45,7 +48,7 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
   }
 
   async findById(id: string): Promise<Canvas | null> {
-    const record = await prisma.canvas.findUnique({
+    const record = await this.database.canvas.findUnique({
       where: { id },
       include: canvasWithPins,
     });
@@ -53,15 +56,37 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
   }
 
   async findByShareId(shareId: string): Promise<Canvas | null> {
-    const record = await prisma.canvas.findUnique({
+    const record = await this.database.canvas.findUnique({
       where: { shareId },
       include: canvasWithPins,
     });
     return record ? toDomainCanvas(record) : null;
   }
 
+  async findMetadataByShareId(shareId: string): Promise<Canvas | null> {
+    const record = await this.database.canvas.findUnique({
+      where: { shareId },
+      include: {
+        pins: {
+          take: 0,
+          include: { comments: { orderBy: { createdAt: "asc" } } },
+        },
+      },
+    });
+    return record ? toDomainCanvas(record) : null;
+  }
+
+  async findPinsByCanvasIdAndPageRoute(canvasId: string, pageRoute: string): Promise<readonly Pin[]> {
+    const records = await this.database.pin.findMany({
+      where: { canvasId, pageRoute },
+      orderBy: { pinNumber: "asc" },
+      include: { comments: { orderBy: { createdAt: "asc" } } },
+    });
+    return records.map(toDomainPin);
+  }
+
   async findPinById(pinId: string): Promise<Pin | null> {
-    const record = await prisma.pin.findUnique({
+    const record = await this.database.pin.findUnique({
       where: { id: pinId },
       include: { comments: { orderBy: { createdAt: "asc" } } },
     });
@@ -69,7 +94,7 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
   }
 
   async findCommentById(commentId: string) {
-    const record = await prisma.comment.findUnique({ where: { id: commentId } });
+    const record = await this.database.comment.findUnique({ where: { id: commentId } });
     if (!record) return null;
     return createComment({
       id: record.id,
@@ -82,7 +107,7 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
   }
 
   async save(canvas: Canvas, expectedRevision: number): Promise<void> {
-    await prisma.$transaction(async (transaction) => {
+    await this.database.$transaction(async (transaction) => {
       const updated = await transaction.canvas.updateMany({
         where: { id: canvas.id, revision: expectedRevision },
         data: { revision: canvas.revision, updatedAt: new Date(canvas.updatedAt) },
@@ -97,8 +122,13 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
           data: {
             id: pin.id,
             canvasId: canvas.id,
+            pageRoute: pin.pageRoute,
+            pinNumber: pin.pinNumber,
             x: pin.x,
             y: pin.y,
+            domSelector: pin.domAnchor?.selector ?? null,
+            domOffsetX: pin.domAnchor?.offsetX ?? null,
+            domOffsetY: pin.domAnchor?.offsetY ?? null,
             status: pin.status,
             createdById: pin.createdBy.id,
             createdByName: pin.createdBy.displayName,
@@ -108,6 +138,8 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
             createdAt: new Date(pin.createdAt),
             browserWidth: Math.round(pin.snapshot.viewport.width),
             browserHeight: Math.round(pin.snapshot.viewport.height),
+            scrollX: pin.snapshot.scrollOffset?.x ?? null,
+            scrollY: pin.snapshot.scrollOffset?.y ?? null,
             browserName: pin.snapshot.browser.name,
             browserVersion: pin.snapshot.browser.version,
             operatingSystem: pin.snapshot.operatingSystem.name,
@@ -131,7 +163,7 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
   }
 
   async listSummaries() {
-    const records = await prisma.canvas.findMany({
+    const records = await this.database.canvas.findMany({
       orderBy: { createdAt: "desc" },
       include: { pins: { select: { status: true } } },
     });
@@ -149,7 +181,7 @@ export class PrismaCanvasRepository implements CanvasRepository, IPinRepository,
   }
 
   async rememberReviewer(canvasId: string, reviewerId: string, name: string): Promise<void> {
-    await prisma.guestReviewer.upsert({
+    await this.database.guestReviewer.upsert({
       where: { canvasId_name: { canvasId, name } },
       update: { id: reviewerId },
       create: { id: reviewerId, canvasId, name },
@@ -188,13 +220,21 @@ function toDomainPin(record: PrismaCanvas["pins"][number]): Pin {
   const createdBy = createGuestReviewer({ id: record.createdById, displayName: record.createdByName });
   const pin = createPin({
     id: record.id,
+    pageRoute: record.pageRoute,
+    pinNumber: record.pinNumber,
     x: record.x,
     y: record.y,
+    ...(record.domSelector === null || record.domOffsetX === null || record.domOffsetY === null
+      ? {}
+      : { domAnchor: { selector: record.domSelector, offsetX: record.domOffsetX, offsetY: record.domOffsetY } }),
     createdBy,
     createdAt: record.createdAt.toISOString(),
     snapshot: {
       reviewedUrl: record.reviewedUrl,
       viewport: { width: record.browserWidth, height: record.browserHeight },
+      ...(record.scrollX === null || record.scrollY === null
+        ? {}
+        : { scrollOffset: { x: record.scrollX, y: record.scrollY } }),
       browser: {
         name: record.browserName,
         ...(record.browserVersion === null ? {} : { version: record.browserVersion }),

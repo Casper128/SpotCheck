@@ -1,0 +1,3 @@
+ALTER TABLE "Pin" ADD COLUMN "domSelector" TEXT;
+ALTER TABLE "Pin" ADD COLUMN "domOffsetX" REAL;
+ALTER TABLE "Pin" ADD COLUMN "domOffsetY" REAL;
