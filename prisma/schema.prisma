@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Canvas {
+  id                  String   @id @default(cuid())
+  shareId             String   @unique
+  title               String
+  sourceType          String
+  sourceUrl           String?
+  imagePath           String?
+  viewportWidth       Int
+  viewportHeight      Int
+  deviceScaleFactor   Float?
+  userAgent           String?
+  capturedAt          DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  revision            Int      @default(0)
+  pins                Pin[]
+}
+
+model Pin {
+  id                    String    @id @default(cuid())
+  canvasId              String
+  x                     Float
+  y                     Float
+  status                String    @default("open")
+  createdById           String
+  createdByName         String
+  resolvedById          String?
+  resolvedByName        String?
+  resolvedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  browserWidth          Int
+  browserHeight         Int
+  browserName           String
+  browserVersion        String?
+  operatingSystem       String
+  operatingSystemVersion String?
+  reviewedUrl           String
+  capturedAt            DateTime
+  canvas                Canvas    @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  comments              Comment[]
+
+  @@index([canvasId, status, createdAt])
+}
+
+model Comment {
+  id                String   @id @default(cuid())
+  pinId             String
+  authorId          String
+  authorName        String
+  body              String
+  replyToCommentId  String?
+  createdAt         DateTime @default(now())
+  pin               Pin      @relation(fields: [pinId], references: [id], onDelete: Cascade)
+
+  @@index([pinId, createdAt])
+}
+
+model GuestReviewer {
+  id        String   @id @default(cuid())
+  canvasId  String
+  name      String
+  createdAt DateTime @default(now())
+
+  @@unique([canvasId, name])
+}

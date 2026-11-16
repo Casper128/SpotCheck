@@ -1,16 +1,19 @@
 import { assertNonBlank, assertTimestamp, DomainError } from "../errors";
 import type { Comment } from "./Comment";
 import type { GuestReviewer } from "./GuestReviewer";
+import { createPinSnapshotMetadata, type PinSnapshotMetadata } from "./PinSnapshotMetadata";
 
 export type PinStatus = "open" | "resolved";
 
 export interface Pin {
   readonly id: string;
+  /** Normalized coordinates relative to the captured viewport, each in [0, 1]. */
   readonly x: number;
   readonly y: number;
   readonly status: PinStatus;
   readonly createdBy: GuestReviewer;
   readonly createdAt: string;
+  readonly snapshot: PinSnapshotMetadata;
   readonly resolvedBy?: GuestReviewer;
   readonly resolvedAt?: string;
   readonly comments: readonly Comment[];
@@ -22,6 +25,7 @@ export interface PinAttributes {
   readonly y: number;
   readonly createdBy: GuestReviewer;
   readonly createdAt: string;
+  readonly snapshot: PinSnapshotMetadata;
 }
 
 export function createPin(attributes: PinAttributes): Pin {
@@ -37,6 +41,7 @@ export function createPin(attributes: PinAttributes): Pin {
     status: "open",
     createdBy: attributes.createdBy,
     createdAt: attributes.createdAt,
+    snapshot: createPinSnapshotMetadata(attributes.snapshot),
     comments: [],
   };
 }

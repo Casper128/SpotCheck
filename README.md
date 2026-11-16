@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpotCheck
 
-## Getting Started
+MVP de SpotCheck para revisar páginas web e imágenes con comentarios anclados, hilos y resolución de pines.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 20.9 o posterior
+- npm
+
+## Desarrollo local
 
 ```bash
+npm install
+cp .env.example .env
+npm run db:migrate -- --name init
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000). La base SQLite se guarda en `prisma/dev.db`; las imágenes PNG/JPG, de hasta 10 MB, se guardan en `data/uploads/` y se sirven mediante una ruta segura de la aplicación.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Arrancar con Docker Compose
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Requiere Docker Desktop con Compose v2.
 
-## Learn More
+```bash
+docker compose up --build -d
+```
 
-To learn more about Next.js, take a look at the following resources:
+Abre [http://localhost:3001](http://localhost:3001). Compose construye la aplicación, aplica las migraciones Prisma al iniciar y guarda la base de datos y las imágenes en el volumen persistente de Docker.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker compose logs -f app   # ver el arranque y los logs
+docker compose down         # parar; conserva los datos
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Si el puerto 3001 también está ocupado:
 
-## Deploy on Vercel
+```bash
+SPOTCHECK_PORT=3002 docker compose up --build -d
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`docker compose down -v` elimina también el volumen y todos los datos guardados.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Funcionalidades
+
+- Crear una revisión con una URL HTTP(S) o una imagen PNG/JPG.
+- Compartir `/review/[shareId]`; cada invitado entra con un nombre, sin contraseña.
+- Activar **Comentar**, elegir una posición, escribir comentarios y responder en el hilo.
+- Filtrar puntos pendientes/resueltos y marcar puntos como resueltos.
+- Guardar dimensiones de ventana, navegador, sistema operativo y URL revisada por punto.
+
+Los sitios que bloquean iframes no pueden mostrarse dentro de la aplicación; se pueden abrir aparte y los pines siguen disponibles sobre el área de revisión. La URL externa se carga directamente en el navegador; el servidor no la solicita.
+
+La subida local es para desarrollo y una única instancia. Para producción, usa almacenamiento compartido y una base persistente adecuados a tu despliegue. Los enlaces compartibles son el único control de acceso del MVP; cualquiera que tenga el enlace puede ver y comentar.
+
+## Arquitectura
+
+- `src/domain` — entidades y reglas de negocio puras.
+- `src/application` — casos de uso y contratos.
+- `src/infrastructure` — Prisma/SQLite, IDs, reloj y almacenamiento local de imágenes.
+- `src/presentation` — adaptadores HTTP, componentes y estado Zustand.
+- `src/app` — rutas Next.js App Router.
+
+## Comprobaciones
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```

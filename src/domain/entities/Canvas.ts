@@ -2,12 +2,14 @@ import { assertNonBlank, assertTimestamp, DomainError } from "../errors";
 import type { BrowserMetadata } from "./BrowserMetadata";
 import type { Comment } from "./Comment";
 import type { GuestReviewer } from "./GuestReviewer";
+import { createImageSource, type ImageSource } from "./ImageSource";
 import type { Pin } from "./Pin";
 import { resolvePin as resolvePinEntity } from "./Pin";
 
 export interface Canvas {
   readonly id: string;
   readonly shareId: string;
+  readonly imageSource: ImageSource;
   readonly browserMetadata: BrowserMetadata;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -18,6 +20,7 @@ export interface Canvas {
 export interface CanvasAttributes {
   readonly id: string;
   readonly shareId: string;
+  readonly imageSource: ImageSource;
   readonly browserMetadata: BrowserMetadata;
   readonly createdAt: string;
 }
@@ -29,6 +32,7 @@ export function createCanvas(attributes: CanvasAttributes): Canvas {
   return {
     id,
     shareId,
+    imageSource: createImageSource(attributes.imageSource),
     browserMetadata: attributes.browserMetadata,
     createdAt: attributes.createdAt,
     updatedAt: attributes.createdAt,
