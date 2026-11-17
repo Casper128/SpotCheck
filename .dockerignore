@@ -8,7 +8,7 @@
 **/.env
 **/.env.*
 !**/.env.example
-.git
+**/.git
 .playwright-cli
 output
 coverage

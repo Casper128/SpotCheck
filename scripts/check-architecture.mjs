@@ -68,7 +68,8 @@ function listFiles(directory) {
 
 export function checkProject(root) {
   const errors = [];
-  for (const app of ['backend', 'frontend']) {
+  const applications = ['frontend', ...(fs.existsSync(path.join(root, 'backend')) ? ['backend'] : [])];
+  for (const app of applications) {
     const directory = path.join(root, app, 'src');
     const actual = fs.existsSync(directory) ? fs.readdirSync(directory).filter((name) => !name.startsWith('.')).sort() : [];
     if (actual.join(',') !== [...layers].sort().join(',')) errors.push(`${app}/src:1 Debe contener exactamente domain/application/infrastructure/presentation.`);
@@ -79,7 +80,7 @@ export function checkProject(root) {
       if (parsed.options.strict !== true) errors.push(`${app}/tsconfig.json:1 strict debe ser true.`);
     }
   }
-  for (const app of ['backend', 'frontend', 'shared']) {
+  for (const app of [...applications, 'shared']) {
     const packagePath = path.join(root, app, 'package.json');
     if (fs.existsSync(packagePath)) {
       const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
