@@ -1,6 +1,6 @@
 # Frontend SpotCheck en SiteGround
 
-Este repositorio contiene frontend, contratos compartidos y proxy. La API se publica desde [backend-spotcheck](https://github.com/Casper128/backend-spotcheck).
+Este repositorio contiene frontend y contratos compartidos. La API se publica desde [backend-spotcheck](https://github.com/Casper128/backend-spotcheck).
 
 ## Frontend
 
@@ -27,20 +27,13 @@ Comprueba en el dominio de la API `/swagger/`, `/api/config` y `/health`. Swagge
 
 El backend independiente conserva SQLite por ahora; PostgreSQL requiere una adaptación separada. Base y adjuntos necesitan persistencia. Usa frontend y API bajo subdominios de `mrmamba.com` para que la configuración actual de cookies SameSite funcione entre ambos.
 
-## Proxy
+## Proxy externo
 
-Publica un tercer proyecto desde este repositorio: build `npm run build:proxy`, inicio `npm run start:proxy`. Configura:
-
-```dotenv
-APP_ORIGIN=https://spotcheck.mrmamba.com
-PROXY_ORIGIN=https://DOMINIO_REAL_DEL_PROXY
-```
-
-El proxy debe utilizar un origen separado del frontend y la API. Confirma el mecanismo de inicio del proyecto Custom con el alojamiento. Necesita el repositorio completo porque sirve `frontend/public/spotcheck-inspector.js`.
+Publica el tercer proyecto desde [proxy-spotcheck](https://github.com/Casper128/proxy-spotcheck), rama `main`, Node 22. Instalación `npm ci`, build `npm run build`, inicio `npm start`. Configura `APP_ORIGIN` con el origen real del frontend y `PROXY_ORIGIN` con el origen público del propio proxy. Consulta su README para detalles. Usa ese mismo origen en `NEXT_PUBLIC_PROXY_ORIGIN` del frontend y en `PROXY_ORIGIN` del backend. Reconstruye el frontend después de cambiarlo. El proxy incluye su propia copia del inspector y no depende de archivos de este repositorio.
 
 ## Datos y despliegues
 
-El Compose de este repositorio solo administra frontend y proxy; la API se administra aparte. El volumen Docker histórico `usewpastel_pastel-data` no se elimina con este cambio. No ejecutes `docker compose down -v` sobre instalaciones que contienen datos. Conserva una copia coherente de SQLite y adjuntos antes de moverlos.
+El Compose de este repositorio solo administra el frontend; la API se administra aparte. El volumen Docker histórico `usewpastel_pastel-data` no se elimina con este cambio. No ejecutes `docker compose down -v` sobre instalaciones que contienen datos. Conserva una copia coherente de SQLite y adjuntos antes de moverlos.
 
 Los pushes a `main` pueden disparar el despliegue automático del frontend. La API tiene su propia rama `main` en su propio repositorio: los pushes aquí ya no publican el backend.
 
