@@ -33,3 +33,12 @@ test("project frames carry document scope and cannot target another site", () =>
   assert.equal(frame.searchParams.get("document"), "1");
   assert.throws(() => proxyFrameUrl("https://external.test/products", "http://localhost:3002", "https://site.test/"));
 });
+
+test("same-domain proxy preserves its path and refuses application endpoints", () => {
+  const endpoint = "https://juane17.sg-host.com/proxy";
+  const original = "https://example.com/products?q=one#details";
+  const frame = proxyFrameUrl(original, endpoint, "https://example.com/");
+  assert.equal(new URL(frame).pathname, "/proxy/");
+  assert.equal(reviewedProxyUrl(frame, endpoint), original);
+  assert.throws(() => reviewedProxyUrl("https://juane17.sg-host.com/api/auth/me?url=https://example.com/", endpoint));
+});

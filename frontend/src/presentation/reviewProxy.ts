@@ -2,7 +2,7 @@ export function proxyFrameUrl(target: string, proxyOrigin: string | null, siteUr
   if (siteUrl && new URL(target).origin !== new URL(siteUrl).origin) throw new Error("La página no pertenece al sitio de este proyecto.");
   if (!proxyOrigin) return target;
   const original = new URL(target);
-  const url = new URL("/", proxyOrigin);
+  const url = new URL(`${proxyOrigin.replace(/\/$/, "")}/`);
   url.hash = original.hash;
   original.hash = "";
   url.searchParams.set("url", original.href);
@@ -14,7 +14,8 @@ export function proxyFrameUrl(target: string, proxyOrigin: string | null, siteUr
 export function reviewedProxyUrl(href: string, proxyOrigin: string | null): string {
   if (!proxyOrigin) return href;
   const frame = new URL(href);
-  if (frame.origin !== new URL(proxyOrigin).origin || frame.pathname !== "/") {
+  const endpoint = new URL(`${proxyOrigin.replace(/\/$/, "")}/`);
+  if (frame.origin !== endpoint.origin || frame.pathname !== endpoint.pathname) {
     throw new Error("El proxy comunicó una ruta no válida.");
   }
   const target = new URL(frame.searchParams.get("url") ?? "");

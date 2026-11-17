@@ -85,8 +85,11 @@ export async function createProxyServer({
   load = retrieve,
 } = {}) {
   configuredOrigin(appOrigin, 'APP_ORIGIN');
-  configuredOrigin(proxyOrigin, 'PROXY_ORIGIN');
-  if (appOrigin === proxyOrigin) throw new Error('El proxy debe estar en un origen separado de la aplicación');
+  const proxyEndpoint = new URL(proxyOrigin);
+  if (!['http:', 'https:'].includes(proxyEndpoint.protocol) || proxyEndpoint.username || proxyEndpoint.password || proxyEndpoint.search || proxyEndpoint.hash || !['/', '/proxy', '/proxy/'].includes(proxyEndpoint.pathname)) throw new Error('PROXY_ORIGIN debe ser un endpoint HTTP(S) válido.');
+  proxyOrigin = proxyOrigin.replace(/\/$/, '');
+  const prefix = proxyEndpoint.pathname.replace(/\/$/, '');
+  if (proxyEndpoint.origin === appOrigin && prefix !== '/proxy') throw new Error('El proxy en el mismo origen debe usar /proxy.');
   const inspector = await readFile(new URL('../frontend/public/spotcheck-inspector.js', import.meta.url));
   let active = 0;
   const server = http.createServer(async (request, response) => {
@@ -94,14 +97,18 @@ export async function createProxyServer({
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
     response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
-    response.setHeader('Content-Security-Policy', `default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors ${appOrigin}`);
+    // An opaque sandbox applies even to documents opened directly outside the iframe.
+    // Explicit path sources keep scripts/fetches out of the authenticated application.
+    response.setHeader('Content-Security-Policy', `sandbox allow-scripts; default-src 'none'; script-src ${proxyOrigin}/ 'unsafe-inline' 'unsafe-eval' blob:; style-src ${proxyOrigin}/ 'unsafe-inline'; img-src ${proxyOrigin}/ data: blob:; font-src ${proxyOrigin}/ data:; connect-src ${proxyOrigin}/; frame-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors ${appOrigin}`);
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     const url = new URL(request.url || '/', proxyOrigin);
     if (request.method !== 'GET') { response.writeHead(405, { Allow: 'GET' }); response.end('Solo GET'); return; }
-    if (url.pathname === '/health') { response.end('ok'); return; }
-    if (url.pathname === '/spotcheck-inspector.js') {
+    if (url.pathname === `${prefix}/health`) { response.end('ok'); return; }
+    if (url.pathname === `${prefix}/spotcheck-inspector.js`) {
       response.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' }); response.end(inspector); return;
     }
-    if (url.pathname !== '/' || !url.searchParams.get('url')) { response.writeHead(400); response.end('Falta una URL válida'); return; }
+    if (![`${prefix}/`, prefix || '/'].includes(url.pathname) || !url.searchParams.get('url')) { response.writeHead(400); response.end('Falta una URL válida'); return; }
     if (active >= MAX_CONCURRENT) { response.writeHead(503); response.end('Proxy ocupado'); return; }
     active++;
     try {
@@ -113,7 +120,7 @@ export async function createProxyServer({
       if (response.destroyed) return;
       // Canonicalize redirects in the browser too, so navigation/inspector metadata uses the final URL.
       if (upstream.target.href !== target.href) {
-        const redirect = new URL("/", proxyOrigin);
+        const redirect = new URL(`${proxyOrigin}/`);
         redirect.searchParams.set("url", upstream.target.href);
         if (documentOrigin) { redirect.searchParams.set("document", "1"); redirect.searchParams.set("siteOrigin", documentOrigin); }
         response.writeHead(302, { Location: redirect.href });

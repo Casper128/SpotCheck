@@ -1,6 +1,6 @@
 # SpotCheck
 
-Frontend Next.js, backend Fastify y proxy del inspector en un solo repositorio. `npm start` inicia un único proceso y puerto HTTP. La aplicación y API comparten origen; el contenido externo del proxy conserva un host separado, que debe llegar al mismo despliegue.
+Frontend Next.js, backend Fastify y proxy del inspector en un solo repositorio. `npm start` inicia un único proceso y puerto HTTP. La aplicación, API y proxy comparten dominio. El proxy vive bajo `/proxy` y sus documentos se ejecutan en un sandbox de origen opaco.
 
 ```text
 frontend/  interfaz Next.js
@@ -26,13 +26,13 @@ El arranque aplica `prisma migrate deploy` y después inicia los tres componente
 
 ## URLs del mismo despliegue
 
-- `https://spotcheck.mrmamba.com/`: frontend.
-- `https://spotcheck.mrmamba.com/api/*`: API.
-- `https://spotcheck.mrmamba.com/swagger/`: Swagger.
-- `https://spotcheck.mrmamba.com/health`: servidor y consulta PostgreSQL.
-- `https://preview.mrmamba.com/`: proxy de sitios externos, dirigido al mismo proceso Node.
+- `https://juane17.sg-host.com/`: frontend.
+- `https://juane17.sg-host.com/api/*`: API.
+- `https://juane17.sg-host.com/swagger/`: Swagger.
+- `https://juane17.sg-host.com/health`: servidor y consulta PostgreSQL.
+- `https://juane17.sg-host.com/proxy/`: proxy de sitios externos, dentro del mismo proceso Node.
 
-No sirve publicar contenido externo bajo el origen autenticado de la aplicación. El servidor enruta por el encabezado Host y rechaza hosts no configurados. SiteGround debe admitir ambos hosts en un proyecto y preservar Host. Si solo admite un dominio por proyecto, el repositorio sigue siendo uno, pero será necesario desplegar el proxy aparte o usar un proveedor/entrada HTTP que permita varios hosts.
+El proxy usa sandbox HTTP y de iframe sin `allow-same-origin`, bloquea frames, formularios y workers, y limita scripts y conexiones a `/proxy`. Los mensajes del inspector validan ventana, origen opaco y nonce. Los sitios que necesitan almacenamiento, cookies o ciertos comportamientos SPA pueden requerir integración mediante snippet. No se necesitan alias ni otro proyecto Node.
 
 ## Base de datos y datos anteriores
 
@@ -42,7 +42,7 @@ Los adjuntos siguen siendo archivos locales y requieren `UPLOAD_DIRECTORY` persi
 
 ## Docker
 
-Define `POSTGRES_PASSWORD` con una contraseña fuerte apta para URL (por ejemplo hexadecimal) en tu entorno o `.env` raíz; ejecuta `npm run docker:up`. Compose crea `app` y `postgres`, con volúmenes nuevos y separados, sin migrar ni eliminar el volumen SQLite histórico. Para desarrollo, la app abre en `http://localhost:3001` y el proxy en `http://preview.localhost:3001`; ambos llegan al mismo puerto. Si el sistema no resuelve `preview.localhost`, añade una entrada local hacia 127.0.0.1. No uses `down -v` con datos que quieras conservar.
+Define `POSTGRES_PASSWORD` con una contraseña fuerte apta para URL (por ejemplo hexadecimal) en tu entorno o `.env` raíz; ejecuta `npm run docker:up`. Compose crea `app` y `postgres`, con volúmenes nuevos y separados, sin migrar ni eliminar el volumen SQLite histórico. Para desarrollo, la app abre en `http://localhost:3001` y el proxy en `http://localhost:3001/proxy/`; ambos llegan al mismo puerto. No uses `down -v` con datos que quieras conservar.
 
 ## Verificación
 

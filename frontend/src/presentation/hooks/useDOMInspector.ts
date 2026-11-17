@@ -35,6 +35,7 @@ export function useDOMInspector(options: {
   readonly mode: PinPlacementMode;
   readonly pins: readonly Pin[];
   readonly frameUrl: string;
+  readonly opaqueOrigin?: boolean;
   readonly onAnchorClick: (point: AnchoredPinPoint) => void;
   readonly onFreePoint: (point: FreePinPoint) => void;
   readonly onRouteChange: (href: string) => void;
@@ -75,10 +76,10 @@ export function useDOMInspector(options: {
     setHoverState({ mode: options.mode, candidates: [], selectedSelector: "" });
     let targetOrigin = "";
     try { targetOrigin = new URL(options.frameUrl).origin; } catch { /* Invalid URLs stay unsupported. */ }
-    setConnection(targetOrigin && targetOrigin !== "null" && targetOrigin !== window.location.origin ? "connecting" : "unsupported");
+    setConnection(targetOrigin && targetOrigin !== "null" && (options.opaqueOrigin || targetOrigin !== window.location.origin) ? "connecting" : "unsupported");
     setLivePositions(new Map());
     setMissingAnchors(new Set());
-  }, [options.frameUrl, options.mode]);
+  }, [options.frameUrl, options.mode, options.opaqueOrigin]);
 
   useEffect(() => {
     callbacksRef.current = {
@@ -111,11 +112,11 @@ export function useDOMInspector(options: {
         nonce,
         type: "candidate",
         selector,
-      }, new URL(options.frameUrl).origin);
+      }, options.opaqueOrigin ? "*" : new URL(options.frameUrl).origin);
     } catch {
       // The current frame URL can change while a candidate is being chosen.
     }
-  }, [hoverCandidates, options.frameUrl, options.iframeRef]);
+  }, [hoverCandidates, options.frameUrl, options.iframeRef, options.opaqueOrigin]);
 
   useEffect(() => {
     if (frameLoad === 0 || loadedFrameUrlRef.current !== options.frameUrl) return;
@@ -126,7 +127,7 @@ export function useDOMInspector(options: {
     try {
       targetOrigin = new URL(options.frameUrl).origin;
       if (targetOrigin === "null") throw new Error("Opaque origin");
-      if (targetOrigin === window.location.origin) return;
+      if (targetOrigin === window.location.origin && !options.opaqueOrigin) return;
     } catch {
       return;
     }
@@ -137,7 +138,7 @@ export function useDOMInspector(options: {
     let retryTimer = 0;
     const listener = (event: MessageEvent<unknown>) => {
       if (nonceRef.current !== nonce) return;
-      if (!isTrustedInspectorEvent(event, frameWindow, targetOrigin, nonce, window.location.origin)) return;
+      if (!isTrustedInspectorEvent(event, frameWindow, options.opaqueOrigin ? "null" : targetOrigin, nonce, window.location.origin)) return;
       const message = event.data;
       if (message.type === "ready") {
         if (!matchesOrigin(message.href, targetOrigin)) return;
@@ -214,7 +215,7 @@ export function useDOMInspector(options: {
       version: DOM_INSPECTOR_VERSION,
       type: "start",
       nonce,
-    }, targetOrigin);
+    }, options.opaqueOrigin ? "*" : targetOrigin);
     sendStart();
     retryTimer = window.setInterval(() => {
       if (readyRef.current) window.clearInterval(retryTimer);
@@ -233,7 +234,7 @@ export function useDOMInspector(options: {
       readyRef.current = false;
       nonceRef.current = "";
     };
-  }, [options.iframeRef, options.frameUrl, frameLoad]);
+  }, [options.iframeRef, options.frameUrl, frameLoad, options.opaqueOrigin]);
 
   useEffect(() => {
     if (frameLoad === 0 || loadedFrameUrlRef.current !== options.frameUrl) return;
@@ -253,7 +254,7 @@ export function useDOMInspector(options: {
       nonce,
       type: "inspection",
       mode: options.mode,
-    }, targetOrigin);
+    }, options.opaqueOrigin ? "*" : targetOrigin);
     frameWindow.postMessage({
       protocol: DOM_INSPECTOR_PROTOCOL,
       version: DOM_INSPECTOR_VERSION,
@@ -265,8 +266,8 @@ export function useDOMInspector(options: {
         offsetX: pin.domAnchor!.offsetX,
         offsetY: pin.domAnchor!.offsetY,
       })),
-    }, targetOrigin);
-  }, [options.iframeRef, options.frameUrl, options.mode, options.pins, connection, frameLoad]);
+    }, options.opaqueOrigin ? "*" : targetOrigin);
+  }, [options.iframeRef, options.frameUrl, options.mode, options.pins, connection, frameLoad, options.opaqueOrigin]);
 
   return {
     connection,

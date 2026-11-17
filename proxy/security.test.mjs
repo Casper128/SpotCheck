@@ -72,9 +72,10 @@ test('isolated server strips upstream cookies, rejects writes, and enforces CSP'
     const response = await fetch(`${origin}/?url=https%3A%2F%2Fexample.com`, { headers: { Cookie: 'app-secret=secret', Authorization: 'secret' } });
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('set-cookie'), null);
-    assert.equal(response.headers.get('access-control-allow-origin'), null);
+    assert.equal(response.headers.get('access-control-allow-origin'), '*');
+    assert.equal(response.headers.get('access-control-allow-credentials'), null);
     assert.ok(response.headers.get('content-security-policy').includes(`frame-ancestors ${APP}`));
-    assert.ok(response.headers.get('content-security-policy').includes("connect-src 'self'"));
+    assert.ok(response.headers.get('content-security-policy').includes(`connect-src ${PROXY}/`));
     assert.ok((await response.text()).includes('spotcheck-inspector.js'));
     assert.equal((await fetch(`${origin}/?url=https://example.com`, { method: 'POST' })).status, 405);
     assert.equal(calls, 1);
@@ -82,8 +83,8 @@ test('isolated server strips upstream cookies, rejects writes, and enforces CSP'
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });
 
-test('refuses same origin app and proxy', async () => {
-  await assert.rejects(createProxyServer({ appOrigin: APP, proxyOrigin: APP }), /separado/);
+test('refuses same origin proxy without the isolated path', async () => {
+  await assert.rejects(createProxyServer({ appOrigin: APP, proxyOrigin: APP }), /\/proxy/);
 });
 
 
@@ -104,4 +105,30 @@ test('pinned connections preserve upstream Host and reject size, compression and
     await assert.rejects(requestPinned(destination('/gzip'), 1000), /compresión/);
     await assert.rejects(requestPinned(destination('/slow'), 40), /espera/);
   } finally { fixture.closeAllConnections(); await new Promise((resolve) => fixture.close(resolve)); }
+});
+
+test('same-origin proxy stays under /proxy and applies opaque sandbox on documents', async () => {
+  const endpoint = `${APP}/proxy`;
+  const server = await createProxyServer({ appOrigin: APP, proxyOrigin: endpoint, load: async url => ({
+    status: 200, target: new URL(url), headers: { 'content-type': 'text/html' },
+    body: Buffer.from('<html><head></head><body><img src="/photo.png"><a href="/next">Next</a></body></html>'),
+  }) });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${address}/proxy/?url=https://example.com&document=1&siteOrigin=https://example.com`);
+    assert.equal(response.status, 200);
+    const csp = response.headers.get('content-security-policy');
+    assert.ok(csp.includes('sandbox allow-scripts;'));
+    assert.ok(!csp.includes('allow-same-origin'));
+    assert.ok(csp.includes(`connect-src ${endpoint}/;`));
+    assert.ok(csp.includes("frame-src 'none'"));
+    const html = await response.text();
+    assert.ok(html.includes(`${endpoint}/spotcheck-inspector.js`));
+    assert.ok(html.includes(`${endpoint}/?url=`));
+    assert.equal((await fetch(`${address}/proxy/health`)).status, 200);
+    assert.equal((await fetch(`${address}/proxy/spotcheck-inspector.js`)).status, 200);
+    assert.equal((await fetch(`${address}/api/auth/me`)).status, 400);
+    assert.equal((await fetch(`${address}/proxy/?url=https://example.com`, { method: 'POST' })).status, 405);
+  } finally { await new Promise(resolve => server.close(resolve)); }
 });

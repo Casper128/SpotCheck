@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${SPOTCHECK_APP_ORIGIN:-http://localhost:3001}
-        NEXT_PUBLIC_PROXY_ORIGIN: ${SPOTCHECK_PROXY_ORIGIN:-http://preview.localhost:3001}
+        NEXT_PUBLIC_PROXY_ORIGIN: ${SPOTCHECK_PROXY_ORIGIN:-http://localhost:3001/proxy}
     env_file:
       - path: backend/.env
         required: false
@@ -16,7 +16,7 @@ services:
       UPLOAD_DIRECTORY: /app/data/uploads
       FRONTEND_ORIGIN: ${SPOTCHECK_APP_ORIGIN:-http://localhost:3001}
       PUBLIC_API_ORIGIN: ${SPOTCHECK_APP_ORIGIN:-http://localhost:3001}
-      PROXY_ORIGIN: ${SPOTCHECK_PROXY_ORIGIN:-http://preview.localhost:3001}
+      PROXY_ORIGIN: ${SPOTCHECK_PROXY_ORIGIN:-http://localhost:3001/proxy}
       PORT: "3000"
     ports:
       - "${SPOTCHECK_PORT:-3001}:3000"

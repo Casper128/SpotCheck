@@ -8,7 +8,10 @@ const schema = z.object({
   PUBLIC_API_ORIGIN: origin.default("http://localhost:4000"),
   FRONTEND_ORIGIN: origin.default("http://localhost:3000"),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
-  PROXY_ORIGIN: origin.optional(),
+  PROXY_ORIGIN: z.url({ protocol: /^https?$/ }).refine(value => {
+    const url = new URL(value);
+    return !url.username && !url.password && !url.search && !url.hash && (url.pathname === "/" || url.pathname === "/proxy" || url.pathname === "/proxy/");
+  }, "El proxy debe usar un origen HTTP(S) o su ruta /proxy.").optional(),
   GOOGLE_CLIENT_ID: z.string().trim().optional(),
   SESSION_SECRET: z.preprocess(value => value === "" ? undefined : value, z.string().min(32).optional()),
   SESSION_COOKIE_SECURE: z.enum(["true", "false"]).optional(),

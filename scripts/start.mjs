@@ -16,11 +16,10 @@ const config = readConfig();
 const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT no válido.');
 const appOrigin = new URL(config.frontendOrigin);
-const proxyOrigin = new URL(config.proxyOrigin || `http://preview.localhost:${port}`);
-if (proxyOrigin.origin !== (config.proxyOrigin || proxyOrigin.origin) || !['http:', 'https:'].includes(proxyOrigin.protocol)) throw new Error('PROXY_ORIGIN debe ser un origen HTTP(S) exacto.');
-if (appOrigin.host === proxyOrigin.host) throw new Error('El proxy requiere un host separado de la aplicación.');
-if (config.publicApiOrigin !== config.frontendOrigin) throw new Error('En el despliegue unificado PUBLIC_API_ORIGIN y FRONTEND_ORIGIN deben coincidir.');
-if (process.env.NODE_ENV === 'production' && !config.proxyOrigin) throw new Error('Configura PROXY_ORIGIN con un subdominio del mismo despliegue.');
+const proxyOrigin = new URL(config.proxyOrigin || `${appOrigin.origin}/proxy`);
+if (proxyOrigin.origin !== appOrigin.origin || proxyOrigin.pathname.replace(/\/$/, '') !== '/proxy') throw new Error('En el despliegue unificado PROXY_ORIGIN debe ser FRONTEND_ORIGIN + /proxy.');
+if (config.publicApiOrigin !== config.frontendOrigin) throw new Error('PUBLIC_API_ORIGIN y FRONTEND_ORIGIN deben coincidir.');
+config.proxyOrigin = `${appOrigin.origin}/proxy`;
 
 // Run migrations against the runtime database, never against a temporary build database.
 await new Promise((resolve, reject) => {
@@ -33,13 +32,13 @@ const frontend = next({ dev, dir: fileURLToPath(new URL('../frontend', import.me
 await frontend.prepare();
 await api.ready();
 const handleFrontend = frontend.getRequestHandler();
-const proxy = await createProxyServer({ appOrigin: appOrigin.origin, proxyOrigin: proxyOrigin.origin });
+const proxy = await createProxyServer({ appOrigin: appOrigin.origin, proxyOrigin: config.proxyOrigin });
 const server = createServer({ requestTimeout: 20_000, headersTimeout: 10_000 }, (request, response) => {
-  // Do not trust forwarded host headers: untrusted sites must never share the app origin.
+  // The proxy path always serves sandboxed content; never forward requests to API by target URL.
   const host = (request.headers.host || '').toLowerCase();
-  if (host === proxyOrigin.host.toLowerCase()) { proxy.emit('request', request, response); return; }
   if (host !== appOrigin.host.toLowerCase()) { response.writeHead(421); response.end('Host no configurado'); return; }
   const pathname = (request.url || '/').split('?')[0];
+  if (pathname === '/proxy' || pathname.startsWith('/proxy/')) { proxy.emit('request', request, response); return; }
   if (pathname === '/health' || pathname === '/api' || pathname.startsWith('/api/') || pathname === '/swagger' || pathname.startsWith('/swagger/')) {
     api.server.emit('request', request, response);
     return;

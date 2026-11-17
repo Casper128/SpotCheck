@@ -81,6 +81,7 @@ export function ReviewCanvas({
     mode: placementMode,
     pins,
     frameUrl: inspectorFrameUrl,
+    opaqueOrigin: Boolean(activeProxyOrigin),
     onAnchorClick: anchorClick,
     onFreePoint: freePoint,
     onRouteChange: (href) => onDetectedRoute(inspectorRouteHref(href, activeProxyOrigin)),
@@ -156,7 +157,7 @@ export function ReviewCanvas({
                   className="review-iframe"
                   ref={iframeRef}
                   title={`Vista de revisión de ${canvas.browserMetadata.pageTitle}`}
-                  sandbox={getIframeSandbox(inspectorFrameUrl, appOrigin)}
+                  sandbox={activeProxyOrigin ? "allow-scripts" : getIframeSandbox(inspectorFrameUrl, appOrigin)}
                   src={inspectorFrameUrl}
                   referrerPolicy="no-referrer"
                   onLoad={() => { setLoadedFrameKey(frameKey); inspector.onLoad(); }}

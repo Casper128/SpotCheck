@@ -66,30 +66,34 @@ export function rewriteHTML(html, target, origin, appOrigin, siteOrigin = null) 
 }
 
 function runtimeScript(target, origin, siteOrigin) {
-  const config = JSON.stringify({ target, origin, siteOrigin }).replaceAll('<', '\\u003c');
+  const config = JSON.stringify({ target, origin, siteOrigin, proxyOrigin: new URL(origin).origin, proxyPath: new URL(`${origin}/`).pathname }).replaceAll('<', '\\u003c');
   return `(() => {
     const config = ${config};
     const originalUrl = () => { try { return new URL(location.href).searchParams.get('url') || config.target; } catch { return config.target; } };
     const wrap = (value, document = false) => {
       let url = new URL(String(value), originalUrl());
-      if (url.origin === config.origin && url.searchParams.has('url')) { const hash = url.hash; url = new URL(url.searchParams.get('url')); if (hash) url.hash = hash; }
+      if (url.origin === config.proxyOrigin && url.searchParams.has('url')) { const hash = url.hash; url = new URL(url.searchParams.get('url')); if (hash) url.hash = hash; }
       if (document && config.siteOrigin && url.origin !== config.siteOrigin) return null;
       if (!['http:', 'https:'].includes(url.protocol)) return url.href;
-      if (url.origin === config.origin && (url.pathname === '/spotcheck-inspector.js' || url.searchParams.has('url'))) return url.href;
+      if (url.origin === config.proxyOrigin && (url.pathname === config.proxyPath + 'spotcheck-inspector.js' || url.searchParams.has('url'))) return url.href;
       const hash = url.hash;
       url.hash = '';
       return config.origin + '/?url=' + encodeURIComponent(url.href) + (document && config.siteOrigin ? '&document=1&siteOrigin=' + encodeURIComponent(config.siteOrigin) : '') + hash;
     };
     const fetchOriginal = window.fetch;
     window.fetch = function(input, init) {
-      if (input instanceof Request) return fetchOriginal.call(this, new Request(wrap(input.url), input), init);
-      return fetchOriginal.call(this, wrap(input), init);
+      if (input instanceof Request) return fetchOriginal.call(this, new Request(wrap(input.url), input), { ...init, credentials: "omit" });
+      return fetchOriginal.call(this, wrap(input), { ...init, credentials: "omit" });
     };
     const openOriginal = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url, ...rest) { return openOriginal.call(this, method, wrap(url), ...rest); };
     for (const method of ['pushState', 'replaceState']) {
       const original = history[method];
-      history[method] = function(state, unused, url) { const target = url == null ? url : wrap(url, true); if (url != null && target == null) throw new Error('Navegación externa no permitida'); return original.call(this, state, unused, target); };
+      history[method] = function(state, unused, url) { const target = url == null ? url : wrap(url, true); if (url != null && target == null) throw new Error('Navegación externa no permitida'); try { return original.call(this, state, unused, target); } catch (error) {
+        if (error.name !== 'SecurityError' || target == null) throw error;
+        // Opaque origins cannot always rewrite history URLs. Navigate inside the sandbox instead.
+        location.assign(target);
+      } };
     }
     document.addEventListener('click', (event) => {
       const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;

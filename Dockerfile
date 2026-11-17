@@ -14,7 +14,7 @@ COPY shared ./shared
 COPY scripts ./scripts
 COPY proxy ./proxy
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001
-ARG NEXT_PUBLIC_PROXY_ORIGIN=http://preview.localhost:3001
+ARG NEXT_PUBLIC_PROXY_ORIGIN=http://localhost:3001/proxy
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_PROXY_ORIGIN=$NEXT_PUBLIC_PROXY_ORIGIN
 RUN npm run build && mkdir -p /app/data/uploads /app/frontend/.next/cache && chown -R node:node /app/data /app/frontend/.next

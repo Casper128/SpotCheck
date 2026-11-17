@@ -3,10 +3,10 @@
 - [x] Frontend, backend, proxy y shared canónico en el repositorio SpotCheck.
 - [x] Swagger preservado en `/swagger/`.
 - [x] Proveedor, migración inicial y consulta workspace adaptados a PostgreSQL.
-- [x] Un comando `npm start`, un proceso y puerto; API/Next en el host principal y proxy en otro host del mismo proceso.
+- [x] Un comando `npm start`, un proceso y puerto; API/Next y proxy bajo /proxy en el mismo host, con documentos de origen opaco.
 - [x] Build completo y TypeScript del backend correctos.
 - [ ] Configurar credenciales PostgreSQL y almacenamiento de adjuntos en SiteGround.
-- [ ] Confirmar dos hosts por proyecto Node y preservación de Host.
+- [x] Eliminar requisito de dos hosts: proxy por ruta con sandbox HTTP e iframe.
 - [ ] Validación funcional del alojamiento e importación opcional de datos SQLite anteriores.
 
 La guía vigente es [DEPLOY_SITEGROUND.md](DEPLOY_SITEGROUND.md). El documento siguiente conserva el diseño y seguimiento histórico; no cambia los requisitos actuales.
