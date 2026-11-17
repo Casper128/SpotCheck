@@ -1,0 +1,31 @@
+{
+  "name": "@spotcheck/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/presentation/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/presentation/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "test:r1": "tsx --test tests/public-config.test.ts",
+    "access": "tsx src/presentation/cli/provisionAccess.ts",
+    "test:r2": "tsx --test tests/*.test.ts",
+    "test:r3": "tsx --test tests/workspace.test.ts tests/http-api.test.ts",
+    "access:production": "node dist/presentation/cli/provisionAccess.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.4.3",
+    "@fastify/multipart": "^9.4.0",
+    "@prisma/client": "^6.19.3",
+    "@spotcheck/shared": "*",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.12.8",
+    "google-auth-library": "^10.9.1",
+    "jsonwebtoken": "^9.0.3",
+    "prisma": "^6.19.3"
+  }
+}

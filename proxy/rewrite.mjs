@@ -1,5 +1,9 @@
 import { parse, serialize } from 'parse5';
 
+export function documentUrl(value, base, origin, siteOrigin) {
+  try { const target = new URL(value, base); if (target.origin !== siteOrigin) return null; const result = new URL(proxyUrl(target.href, base, origin)); result.searchParams.set('document', '1'); result.searchParams.set('siteOrigin', siteOrigin); return result.href; } catch { return null; }
+}
+
 export function proxyUrl(value, base, origin) {
   const trimmed = value.trim();
   if (!trimmed || trimmed.startsWith('#') || /^(data:|blob:|mailto:|tel:)/i.test(trimmed)) return value;
@@ -19,7 +23,7 @@ export function rewriteCSS(css, base, origin) {
       (_, prefix, quote, url) => `${prefix}${quote}${proxyUrl(url, base, origin)}${quote}`);
 }
 
-export function rewriteHTML(html, target, origin, appOrigin) {
+export function rewriteHTML(html, target, origin, appOrigin, siteOrigin = null) {
   const document = parse(html);
   let base = target;
   // Honor the first upstream base before removing it.
@@ -41,8 +45,8 @@ export function rewriteHTML(html, target, origin, appOrigin) {
     if (!node.attrs) return;
     node.attrs = node.attrs.filter((attribute) => !['integrity', 'nonce', 'crossorigin', 'ping', 'srcdoc'].includes(attribute.name));
     for (const attribute of node.attrs) {
-      if (['href', 'src', 'poster', 'action', 'formaction', 'data'].includes(attribute.name))
-        attribute.value = proxyUrl(attribute.value, base, origin);
+      if (attribute.name === 'href' && node.tagName === 'a' && siteOrigin) { const target = documentUrl(attribute.value, base, origin, siteOrigin); if (target === null) { attribute.value = '#'; node.attrs.push({ name: 'data-spotcheck-external', value: 'true' }); } else attribute.value = target; }
+      else if (['href', 'src', 'poster', 'action', 'formaction', 'data'].includes(attribute.name)) attribute.value = proxyUrl(attribute.value, base, origin);
       if (attribute.name === 'style') attribute.value = rewriteCSS(attribute.value, base, origin);
       if (attribute.name === 'srcset') {
         // Browser falls back to rewritten src; removing avoids bypass through complex data URL candidates.
@@ -56,23 +60,25 @@ export function rewriteHTML(html, target, origin, appOrigin) {
   };
   visit(document);
   const output = serialize(document);
-  const injection = `<script>${runtimeScript(target, origin)}</script><script src="${origin}/spotcheck-inspector.js" data-parent-origin="${appOrigin}" data-allowed-hosts="${new URL(origin).hostname}" defer></script>`;
+  const injection = `<script>${runtimeScript(target, origin, siteOrigin)}</script><script src="${origin}/spotcheck-inspector.js" data-parent-origin="${appOrigin}" data-allowed-hosts="${new URL(origin).hostname}" defer></script>`;
   // Run before the site's scripts, including synchronous ones.
   return output.replace(/<head>/i, `<head>${injection}`);
 }
 
-function runtimeScript(target, origin) {
-  const config = JSON.stringify({ target, origin }).replaceAll('<', '\\u003c');
+function runtimeScript(target, origin, siteOrigin) {
+  const config = JSON.stringify({ target, origin, siteOrigin }).replaceAll('<', '\\u003c');
   return `(() => {
     const config = ${config};
     const originalUrl = () => { try { return new URL(location.href).searchParams.get('url') || config.target; } catch { return config.target; } };
-    const wrap = (value) => {
-      const url = new URL(String(value), originalUrl());
+    const wrap = (value, document = false) => {
+      let url = new URL(String(value), originalUrl());
+      if (url.origin === config.origin && url.searchParams.has('url')) { const hash = url.hash; url = new URL(url.searchParams.get('url')); if (hash) url.hash = hash; }
+      if (document && config.siteOrigin && url.origin !== config.siteOrigin) return null;
       if (!['http:', 'https:'].includes(url.protocol)) return url.href;
       if (url.origin === config.origin && (url.pathname === '/spotcheck-inspector.js' || url.searchParams.has('url'))) return url.href;
       const hash = url.hash;
       url.hash = '';
-      return config.origin + '/?url=' + encodeURIComponent(url.href) + hash;
+      return config.origin + '/?url=' + encodeURIComponent(url.href) + (document && config.siteOrigin ? '&document=1&siteOrigin=' + encodeURIComponent(config.siteOrigin) : '') + hash;
     };
     const fetchOriginal = window.fetch;
     window.fetch = function(input, init) {
@@ -83,11 +89,11 @@ function runtimeScript(target, origin) {
     XMLHttpRequest.prototype.open = function(method, url, ...rest) { return openOriginal.call(this, method, wrap(url), ...rest); };
     for (const method of ['pushState', 'replaceState']) {
       const original = history[method];
-      history[method] = function(state, unused, url) { return original.call(this, state, unused, url == null ? url : wrap(url)); };
+      history[method] = function(state, unused, url) { const target = url == null ? url : wrap(url, true); if (url != null && target == null) throw new Error('Navegación externa no permitida'); return original.call(this, state, unused, target); };
     }
     document.addEventListener('click', (event) => {
       const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
-      if (anchor) { anchor.href = wrap(anchor.getAttribute('href')); anchor.target = '_self'; }
+      if (anchor) { const target = wrap(anchor.getAttribute('href'), true); if (!target || anchor.hasAttribute('data-spotcheck-external')) { event.preventDefault(); event.stopImmediatePropagation(); return; } anchor.href = target; anchor.target = '_self'; }
     }, true);
     document.addEventListener('submit', (event) => { event.preventDefault(); }, true);
   })();`;

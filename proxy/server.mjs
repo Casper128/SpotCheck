@@ -11,10 +11,11 @@ const MAX_REDIRECTS = 5;
 const MAX_CONCURRENT = 20;
 
 // Exported for deterministic redirect/DNS tests without connecting to private fixture servers.
-export async function retrieve(value, { resolve = resolvePublicTarget, request = requestPinned } = {}) {
+export async function retrieve(value, { resolve = resolvePublicTarget, request = requestPinned, documentOrigin = null } = {}) {
   let current = value;
   const deadline = Date.now() + TIMEOUT_MS;
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+    if (documentOrigin && new URL(current).origin !== documentOrigin) throw new Error("La navegación debe permanecer en el sitio del proyecto");
     let dnsTimer;
     const destination = await Promise.race([
       resolve(current),
@@ -86,7 +87,7 @@ export async function createProxyServer({
   configuredOrigin(appOrigin, 'APP_ORIGIN');
   configuredOrigin(proxyOrigin, 'PROXY_ORIGIN');
   if (appOrigin === proxyOrigin) throw new Error('El proxy debe estar en un origen separado de la aplicación');
-  const inspector = await readFile(new URL('../public/spotcheck-inspector.js', import.meta.url));
+  const inspector = await readFile(new URL('../frontend/public/spotcheck-inspector.js', import.meta.url));
   let active = 0;
   const server = http.createServer(async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');
@@ -105,17 +106,28 @@ export async function createProxyServer({
     active++;
     try {
       const target = parseTarget(url.searchParams.get('url'));
-      const upstream = await load(target.href);
+      const documentOrigin = url.searchParams.get("document") === "1" ? configuredOrigin(url.searchParams.get("siteOrigin") || target.origin, "siteOrigin") : null;
+      if (documentOrigin && target.origin !== documentOrigin) throw new Error("Documento externo no permitido");
+      const upstream = await load(target.href, { documentOrigin });
+      if (documentOrigin && upstream.target.origin !== documentOrigin) throw new Error("Redirección externa no permitida");
       if (response.destroyed) return;
       // Canonicalize redirects in the browser too, so navigation/inspector metadata uses the final URL.
       if (upstream.target.href !== target.href) {
-        response.writeHead(302, { Location: `${proxyOrigin}/?url=${encodeURIComponent(upstream.target.href)}` });
+        const redirect = new URL("/", proxyOrigin);
+        redirect.searchParams.set("url", upstream.target.href);
+        if (documentOrigin) { redirect.searchParams.set("document", "1"); redirect.searchParams.set("siteOrigin", documentOrigin); }
+        response.writeHead(302, { Location: redirect.href });
         response.end(); return;
       }
       const contentType = upstream.headers['content-type'] || 'application/octet-stream';
       let body = upstream.body;
-      if (/^text\/html\b/i.test(contentType)) body = rewriteHTML(body.toString('utf8'), target.href, proxyOrigin, appOrigin);
+      if (/^text\/html\b/i.test(contentType)) body = rewriteHTML(body.toString('utf8'), target.href, proxyOrigin, appOrigin, documentOrigin);
       else if (/^text\/css\b/i.test(contentType)) body = rewriteCSS(body.toString('utf8'), target.href, proxyOrigin);
+      // Public upstream assets carry no user credentials. Reuse them across project routes;
+      // documents and errors keep no-store so navigation remains fresh.
+      if (upstream.status === 200 && /^(?:image\/|font\/|text\/css\b|(?:application|text)\/(?:javascript|x-javascript|font-woff|vnd\.ms-fontobject)\b)/i.test(contentType)) {
+        response.setHeader('Cache-Control', 'public, max-age=300');
+      }
       response.writeHead(upstream.status, { 'Content-Type': /^text\/(html|css)\b/i.test(contentType) ? `${contentType.split(';')[0]}; charset=utf-8` : contentType });
       response.end(body);
     } catch {

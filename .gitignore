@@ -45,3 +45,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Monorepo workspaces
+**/node_modules/
+**/dist/
+/frontend/.next/
+/backend/prisma/*.db*
+/backend/data/uploads/
+!**/.env.example
+
+# Private deployment data backups
+/spotcheck-data-backup/

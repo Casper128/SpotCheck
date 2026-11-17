@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Canvas {
+  id                  String   @id @default(cuid())
+  shareId             String   @unique
+  title               String
+  sourceType          String
+  sourceUrl           String?
+  imagePath           String?
+  viewportWidth       Int
+  viewportHeight      Int
+  deviceScaleFactor   Float?
+  userAgent           String?
+  capturedAt          DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  revision            Int      @default(0)
+  organizationId      String?
+  organization        Organization? @relation(fields: [organizationId], references: [id])
+  pins                Pin[]
+
+  @@index([organizationId])
+}
+
+model Pin {
+  id                    String    @id @default(cuid())
+  canvasId              String
+  pageRoute             String
+  pinNumber             Int
+  x                     Float
+  y                     Float
+  domSelector           String?
+  domOffsetX            Float?
+  domOffsetY            Float?
+  status                String    @default("open")
+  createdById           String
+  createdByName         String
+  resolvedById          String?
+  resolvedByName        String?
+  resolvedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  browserWidth          Int
+  browserHeight         Int
+  scrollX               Float?
+  scrollY               Float?
+  browserName           String
+  browserVersion        String?
+  operatingSystem       String
+  operatingSystemVersion String?
+  reviewedUrl           String
+  capturedAt            DateTime
+  canvas                Canvas    @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  comments              Comment[]
+
+  @@unique([canvasId, pinNumber])
+  @@index([canvasId, pageRoute, status, pinNumber])
+}
+
+model Comment {
+  id                String   @id @default(cuid())
+  pinId             String
+  authorId          String
+  authorName        String
+  body              String
+  replyToCommentId  String?
+  createdAt         DateTime @default(now())
+  pin               Pin      @relation(fields: [pinId], references: [id], onDelete: Cascade)
+
+  @@index([pinId, createdAt])
+}
+
+model GuestReviewer {
+  id        String   @id @default(cuid())
+  canvasId  String
+  name      String
+  createdAt DateTime @default(now())
+
+  @@unique([canvasId, name])
+}
+
+model Organization {
+  id          String @id @default(cuid())
+  name        String
+  memberships OrganizationMembership[]
+  canvases    Canvas[]
+}
+
+model User {
+  id          String @id @default(cuid())
+  googleSub   String @unique
+  email       String
+  displayName String
+  createdAt   DateTime @default(now())
+  membership  OrganizationMembership?
+}
+
+model OrganizationMembership {
+  id             String @id @default(cuid())
+  userId         String @unique
+  organizationId String
+  status         String @default("pending")
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, status])
+}

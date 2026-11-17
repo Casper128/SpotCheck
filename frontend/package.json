@@ -1,0 +1,27 @@
+{
+  "name": "@spotcheck/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test --tsconfig tsconfig.json tests/*.test.ts",
+    "test:r2": "tsx --test --tsconfig tsconfig.json tests/auth-service.test.ts tests/api-client.test.ts",
+    "test:r3": "tsx --test --tsconfig tsconfig.json tests/workspace-cache.test.ts tests/review-navigation.test.ts tests/review-proxy.test.ts tests/dom-inspector-protocol.test.ts"
+  },
+  "dependencies": {
+    "@spotcheck/shared": "*",
+    "lucide-react": "^1.73.0",
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zustand": "^5.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}
