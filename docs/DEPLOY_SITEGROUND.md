@@ -1,12 +1,12 @@
 # Frontend SpotCheck en SiteGround
 
-Este repositorio contiene frontend y contratos compartidos. La API se publica desde [backend-spotcheck](https://github.com/Casper128/backend-spotcheck).
+Este repositorio contiene frontend y sus contratos en `frontend/shared`. La API se publica desde [backend-spotcheck](https://github.com/Casper128/backend-spotcheck).
 
 ## Frontend
 
 Crea o conserva el proyecto Node conectado a `Casper128/SpotCheck`, rama `main`. Usa Node 22, instalación `npm ci --include=dev` (o `npm install` si el panel lo establece), build `npm run build` e inicio `npm start`. Si el panel ya muestra `npm`, el campo de build debe contener `run build`.
 
-El build compila `shared` y Next.js usando Webpack/PostCSS. El inicio ejecuta solo Next.js, escucha en todas las interfaces y utiliza el `PORT` asignado por el alojamiento. El arranque del proveedor debe ejecutar el script `start`; si autodetecta otro entrypoint, configura o confirma ese mecanismo con SiteGround.
+El build compila `frontend/shared` y Next.js usando Webpack/PostCSS. El inicio ejecuta solo Next.js, escucha en todas las interfaces y utiliza el `PORT` asignado por el alojamiento. El arranque del proveedor debe ejecutar el script `start`; si autodetecta otro entrypoint, configura o confirma ese mecanismo con SiteGround.
 
 Configura estas variables ANTES de compilar:
 

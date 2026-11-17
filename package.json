@@ -17,8 +17,8 @@
     "setup": "node scripts/prepare-env.mjs && npm run build:shared",
     "test:m4": "node scripts/smoke-deployment.mjs",
     "check:residues": "node scripts/check-residues.mjs",
-    "test:r1": "tsx --test shared/tests/public-config.test.ts && node --test scripts/tests/check-residues.test.mjs",
-    "test:r2": "tsx --test shared/tests/public-config.test.ts && npm run test:r2 --workspace @spotcheck/frontend",
+    "test:r1": "tsx --test frontend/shared/tests/public-config.test.ts && node --test scripts/tests/check-residues.test.mjs",
+    "test:r2": "tsx --test frontend/shared/tests/public-config.test.ts && npm run test:r2 --workspace @spotcheck/frontend",
     "test:r3": "npm run test:r3 --workspace @spotcheck/frontend",
     "env:prepare": "node scripts/prepare-env.mjs",
     "docker:up": "node scripts/prepare-env.mjs && docker compose up --build -d",
@@ -36,7 +36,7 @@
   },
   "workspaces": [
     "frontend",
-    "shared"
+    "frontend/shared"
   ],
   "engines": {
     "node": ">=22"

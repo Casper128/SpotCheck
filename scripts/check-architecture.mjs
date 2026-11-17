@@ -12,7 +12,7 @@ const normalize = (value) => value.split(path.sep).join('/');
 
 export function inspectSource(filename, text, root) {
   const errors = [];
-  const relative = normalize(path.relative(root, filename));
+  const relative = normalize(path.relative(root, filename)).replace(/^frontend\/shared\//, 'shared/');
   const app = relative.split('/')[0];
   const production = !relative.includes('/tests/');
   const sourceLayer = relative.match(/^(backend|frontend)\/src\/([^/]+)\//)?.[2];
@@ -28,7 +28,7 @@ export function inspectSource(filename, text, root) {
     if (specifier.startsWith('@/')) destination = path.resolve(root, app, 'src', specifier.slice(2));
     else if (specifier.startsWith('.')) destination = path.resolve(path.dirname(filename), specifier);
     if (!destination) return;
-    const target = normalize(path.relative(root, destination));
+    const target = normalize(path.relative(root, destination)).replace(/^frontend\/shared\//, 'shared/');
     if (!target.startsWith(`${app}/`) && !target.startsWith('shared/')) { add(node, `Import escapa de su aplicación: ${specifier}`); return; }
     if (app === 'shared' && !target.startsWith('shared/')) add(node, 'Shared no puede importar aplicaciones.');
     const destinationLayer = target.match(/^(backend|frontend)\/src\/([^/]+)(?:\/|$)/)?.[2];
@@ -81,14 +81,15 @@ export function checkProject(root) {
     }
   }
   for (const app of [...applications, 'shared']) {
-    const packagePath = path.join(root, app, 'package.json');
+    const appDirectory = app === 'shared' && fs.existsSync(path.join(root, 'frontend/shared')) ? 'frontend/shared' : app;
+    const packagePath = path.join(root, appDirectory, 'package.json');
     if (fs.existsSync(packagePath)) {
       const manifest = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
       for (const dependency of Object.keys({ ...manifest.dependencies, ...manifest.devDependencies })) {
         if ((app === 'frontend' && forbiddenData.test(dependency)) || (app === 'backend' && forbiddenUI.test(dependency)) || (app === 'shared' && (forbiddenData.test(dependency) || forbiddenUI.test(dependency)))) errors.push(`${app}/package.json:1 Dependencia prohibida: ${dependency}`);
       }
     }
-    for (const directory of ['src', ...(app === 'frontend' ? ['app'] : []), 'tests']) for (const filename of listFiles(path.join(root, app, directory))) errors.push(...inspectSource(filename, fs.readFileSync(filename, 'utf8'), root));
+    for (const directory of ['src', ...(app === 'frontend' ? ['app'] : []), 'tests']) for (const filename of listFiles(path.join(root, appDirectory, directory))) errors.push(...inspectSource(filename, fs.readFileSync(filename, 'utf8'), root));
   }
   return errors;
 }

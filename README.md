@@ -5,7 +5,7 @@ Interfaz Next.js de revisión colaborativa. El backend se mantiene en [backend-s
 ## Estructura
 
 - `frontend/`: aplicación Next.js, dominio, aplicación, infraestructura y presentación.
-- `shared/`: contratos y validaciones compartidas con la API. Mantenerlos sincronizados con la copia del backend independiente.
+- `frontend/shared/`: contratos y validaciones compartidas con la API. Mantenerlos sincronizados con la copia del backend independiente.
 - Proxy independiente: [proxy-spotcheck](https://github.com/Casper128/proxy-spotcheck), con otro origen y proceso.
 - `scripts/`: preparación, desarrollo y verificaciones.
 - `docs/`: guía de despliegue y documentación histórica de la migración.
