@@ -66,3 +66,7 @@ Los repositorios `backend-spotcheck` y `proxy-spotcheck` se conservan como copia
 
 - [Proyectos Node.js](https://www.siteground.com/kb/what-is-node-js-project)
 - [Dominio principal del proyecto](https://www.siteground.com/kb/change-domain-node-js-project)
+
+## TS2688: falta la definición de tipos `node`
+
+El build necesita `@types/node`, TypeScript, tipos de React y Tailwind/PostCSS. `NODE_ENV=production` puede hacer que npm omita las dependencias de desarrollo durante la instalación. El `.npmrc` raíz establece `include=dev` para incluirlas también en el entorno de build de SiteGround. Conserva `NODE_ENV=production` para ejecutar la aplicación; no cambies el código a JavaScript ni elimines los tipos para ocultar el error. Redespliega con una nueva instalación de dependencias. Si el panel permite configurar instalación, utiliza `npm ci --include=dev`.
