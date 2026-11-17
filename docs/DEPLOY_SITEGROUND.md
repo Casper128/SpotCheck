@@ -73,3 +73,7 @@ La conexión GitHub puede activar redespliegues en cada push de la rama vinculad
 - [Disponibilidad y planes](https://www.siteground.com/kb/node-js-available)
 - [Proyectos, gestión y despliegue desde GitHub](https://www.siteground.com/kb/what-is-node-js-project)
 - [Opciones de build, bases, SSL y SSH](https://www.siteground.com/blog/hosting-node-js-projects-with-siteground)
+
+## Error de tipos Prisma durante el build
+
+Si aparecen `CanvasInclude`, `UserInclude` o `Prisma.sql` inexistentes, verifica que el despliegue usa el último commit: el build del backend ejecuta explícitamente `prisma generate --schema prisma/schema.prisma` antes de TypeScript. El postinstall automático desde la raíz del monorepo no sustituye ese paso. Generar el cliente no crea ni modifica tablas; las migraciones siguen ejecutándose al iniciar la API. Para el proyecto de interfaz utiliza `npm run build:frontend`, y para la API `npm run build:backend`, según la tabla anterior.

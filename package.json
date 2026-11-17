@@ -28,7 +28,7 @@
     "env:prepare": "node scripts/prepare-env.mjs",
     "docker:up": "node scripts/prepare-env.mjs && docker compose up --build -d --remove-orphans",
     "test:r4": "node --test scripts/tests/design-system.test.mjs && node scripts/smoke-deployment.mjs",
-    "build:backend": "npm run db:generate && npm run build:shared && npm run build --workspace @spotcheck/backend",
+    "build:backend": "npm run build:shared && npm run build --workspace @spotcheck/backend",
     "build:frontend": "npm run build:shared && npm run build --workspace @spotcheck/frontend",
     "build:proxy": "npm ci --prefix proxy --omit=dev",
     "start:proxy": "npm --prefix proxy start",
