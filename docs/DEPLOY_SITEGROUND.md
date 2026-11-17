@@ -77,3 +77,7 @@ La conexión GitHub puede activar redespliegues en cada push de la rama vinculad
 ## Error de tipos Prisma durante el build
 
 Si aparecen `CanvasInclude`, `UserInclude` o `Prisma.sql` inexistentes, verifica que el despliegue usa el último commit: el build del backend ejecuta explícitamente `prisma generate --schema prisma/schema.prisma` antes de TypeScript. El postinstall automático desde la raíz del monorepo no sustituye ese paso. Generar el cliente no crea ni modifica tablas; las migraciones siguen ejecutándose al iniciar la API. Para el proyecto de interfaz utiliza `npm run build:frontend`, y para la API `npm run build:backend`, según la tabla anterior.
+
+## Turbopack: `binding to a port / Operation not permitted`
+
+El entorno de build observado de SiteGround bloquea el puerto interno que Turbopack utiliza al procesar CSS. El frontend compila con `next build --webpack` y Tailwind mediante `@tailwindcss/postcss`, sin ese mecanismo de Turbopack. Conserva `npm run build:frontend` como comando del proyecto; no lo sustituyas por `next build` sin `--webpack`. El desarrollo local mantiene el bundler por defecto y comparte la configuración PostCSS.
