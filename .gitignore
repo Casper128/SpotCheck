@@ -60,3 +60,6 @@ next-env.d.ts
 # Unified deployment persistent data (never commit)
 /data/
 /backend/data/
+
+# Private startup diagnostics
+/.runtime/

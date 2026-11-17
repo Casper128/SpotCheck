@@ -70,3 +70,23 @@ Los repositorios `backend-spotcheck` y `proxy-spotcheck` se conservan como copia
 ## TS2688: falta la definición de tipos `node`
 
 El build necesita `@types/node`, TypeScript, tipos de React y Tailwind/PostCSS. `NODE_ENV=production` puede hacer que npm omita las dependencias de desarrollo durante la instalación. El `.npmrc` raíz establece `include=dev` para incluirlas también en el entorno de build de SiteGround. Conserva `NODE_ENV=production` para ejecutar la aplicación; no cambies el código a JavaScript ni elimines los tipos para ocultar el error. Redespliega con una nueva instalación de dependencias. Si el panel permite configurar instalación, utiliza `npm ci --include=dev`.
+
+## Diagnosticar 502 después de un build correcto
+
+`npm start` ejecuta `node scripts/start.mjs`. Ese entrypoint escribe eventos JSON de arranque a consola y al archivo privado `.runtime/startup.jsonl`, relativo a la raíz del repositorio (`app_source`), con permisos 600. El directorio se crea automáticamente; en Docker está preparado para el usuario `node`. El archivo rota al superar 1 MiB y conserva una copia `.1`. No se sirve por HTTP y se excluye de Git y del contexto Docker.
+
+En File Manager busca `public_html/.nodeapp/latest/app_source/.runtime/startup.jsonl`. Si no hay `latest`, usa el directorio del despliegue activo, identificado en los logs; no una versión vieja. Si el administrador oculta carpetas con punto, activa su visualización.
+
+Si la ruta de la aplicación es de solo lectura, configura `SPOTCHECK_LOG_FILE` en el panel con una ruta absoluta, privada y escribible fuera del directorio público. Si no puede escribir, la consola emite `logging.file-unavailable` y conserva el diagnóstico por stdout/stderr. No descargues ni publiques `.env-local`, `.env` o credenciales para diagnosticar.
+
+El primer evento es `startup.begin`; después cada etapa emite `stage.begin`, `stage.ready` y, si tarda, `stage.waiting`. Las etapas son `modules`, `configuration`, `postgres.migrations`, `backend`, `next.prepare`, `backend.ready`, `proxy` y `http.listen`. `startup.ready` confirma que abrió `0.0.0.0` en el puerto registrado. `startup.failed` indica la etapa, código seguro y orientación; errores de configuración muestran solo nombres de campos, nunca valores. No se guardan mensajes de error originales, stacks, cadenas de conexión ni salida cruda de Prisma en este log. Las migraciones tienen un límite de 120 segundos y registran códigos Prisma como P1000 (credenciales), P1001 (host/puerto) o P1010 (permisos).
+
+Interpretación:
+
+- `startup.failed`: comparte esas líneas y la última etapa; corrige la causa indicada antes de reconstruir por ensayo/error.
+- `stage.waiting`: el arranque sigue esperando en esa etapa. El supervisor puede tener un tiempo de inicio menor; una señal de terminación registra `startup.interrupted` si alcanza al proceso.
+- `startup.ready` pero el navegador recibe 502: revisar el puerto/encaminamiento del proveedor y si el proceso fue reiniciado o terminado después. El build correcto por sí solo no confirma el arranque.
+- `request.host-mismatch`: el proceso está recibiendo otro Host. Comparar `expectedHost` y `observedHost`; no desactivar el filtro sin identificar el dominio real recibido.
+- No hay archivo ni `startup.begin` en consola: confirmar si el proveedor ejecuta `npm start` desde este repositorio. La ausencia del archivo también puede deberse a permisos; buscar `logging.file-unavailable` en el log de ejecución. No concluir que la BD falla sin una etapa registrada.
+
+Si puedes usar SSH, desde `app_source` ejecuta `npm start` temporalmente para observar el arranque con las variables reales disponibles. No lances otra instancia sobre un puerto ya ocupado ni pegues secretos en el comando. Reinicia siempre desde el supervisor del alojamiento al terminar el diagnóstico.

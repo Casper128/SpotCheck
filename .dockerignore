@@ -13,3 +13,5 @@
 output
 coverage
 npm-debug.log*
+
+**/.runtime
