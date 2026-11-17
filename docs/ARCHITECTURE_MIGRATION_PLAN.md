@@ -1,3 +1,18 @@
+# Estado actual: repositorio reunificado y PostgreSQL
+
+- [x] Frontend, backend, proxy y shared canónico en el repositorio SpotCheck.
+- [x] Swagger preservado en `/swagger/`.
+- [x] Proveedor, migración inicial y consulta workspace adaptados a PostgreSQL.
+- [x] Un comando `npm start`, un proceso y puerto; API/Next en el host principal y proxy en otro host del mismo proceso.
+- [x] Build completo y TypeScript del backend correctos.
+- [ ] Configurar credenciales PostgreSQL y almacenamiento de adjuntos en SiteGround.
+- [ ] Confirmar dos hosts por proyecto Node y preservación de Host.
+- [ ] Validación funcional del alojamiento e importación opcional de datos SQLite anteriores.
+
+La guía vigente es [DEPLOY_SITEGROUND.md](DEPLOY_SITEGROUND.md). El documento siguiente conserva el diseño y seguimiento histórico; no cambia los requisitos actuales.
+
+---
+
 # Refactorización de SpotCheck — Mr. Mamba
 
 ## Estado y auditoría única (2026-11-16)

@@ -56,3 +56,7 @@ next-env.d.ts
 
 # Private deployment data backups
 /spotcheck-data-backup/
+
+# Unified deployment persistent data (never commit)
+/data/
+/backend/data/

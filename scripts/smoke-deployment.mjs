@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 const compose = JSON.parse(execFileSync('docker', ['compose', 'config', '--format', 'json'], { encoding: 'utf8' }));
-assert.deepEqual(Object.keys(compose.services).sort(), ['frontend']);
-assert.equal(compose.services.frontend.build.dockerfile, 'frontend/Dockerfile');
-assert.equal(compose.services.frontend.volumes, undefined);
-assert.ok(!Object.keys(compose.services.frontend.environment ?? {}).some(key => /DATABASE|PRIVATE|SECRET|PASSWORD|TOKEN/.test(key)));
-const ui = process.env.SPOTCHECK_APP_ORIGIN || `http://localhost:${process.env.SPOTCHECK_PORT || 3001}`;
-const proxy = compose.services.frontend.build.args.NEXT_PUBLIC_PROXY_ORIGIN;
-assert.equal(compose.services.frontend.build.args.NEXT_PUBLIC_PROXY_ORIGIN, proxy);
-assert.notEqual(ui, proxy);
+assert.deepEqual(Object.keys(compose.services).sort(), ['app', 'postgres']);
+assert.equal(compose.services.app.build.dockerfile, 'Dockerfile');
+const app = compose.services.app.environment;
+assert.equal(app.PUBLIC_API_ORIGIN, app.FRONTEND_ORIGIN);
+assert.notEqual(new URL(app.FRONTEND_ORIGIN).host, new URL(app.PROXY_ORIGIN).host);
+assert.ok(app.DATABASE_URL.startsWith('postgresql://'));
+assert.equal(compose.services.app.build.args.NEXT_PUBLIC_API_URL, app.FRONTEND_ORIGIN);
+assert.equal(compose.services.app.build.args.NEXT_PUBLIC_PROXY_ORIGIN, app.PROXY_ORIGIN);
 if (!process.argv.includes('--config-only')) {
-  const get = url => fetch(url, { signal: AbortSignal.timeout(15_000) });
-  for (const url of [ui]) assert.equal((await get(url)).status, 200, url);
+  for (const url of [app.FRONTEND_ORIGIN, `${app.FRONTEND_ORIGIN}/health`, `${app.FRONTEND_ORIGIN}/swagger/json`, `${app.PROXY_ORIGIN}/health`]) {
+    assert.equal((await fetch(url, { signal: AbortSignal.timeout(15_000) })).status, 200, url);
+  }
 }
-console.log('Frontend deployment smoke passed; API and proxy are managed separately.');
+console.log('Unified deployment smoke passed.');

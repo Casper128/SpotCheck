@@ -3,27 +3,35 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "build": "npm run build:frontend",
-    "start": "npm run start:frontend",
+    "dev": "npm run build:backend && node scripts/start.mjs --dev",
+    "build": "npm run build:shared && npm run build --workspace @spotcheck/backend && npm run build --workspace @spotcheck/frontend && npm run build:proxy",
+    "start": "node scripts/start.mjs",
     "lint": "eslint",
-    "test": "npm run test --workspace @spotcheck/shared && node --test scripts/tests/*.test.mjs && npm run test:m3",
+    "test": "npm run test --workspace @spotcheck/shared && node --test scripts/tests/*.test.mjs && npm run test:m3 && npm run test:m2 && npm --prefix proxy test",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check:architecture": "node scripts/check-architecture.mjs && node scripts/check-residues.mjs",
     "test:m1": "npm run test --workspace @spotcheck/shared && node --test scripts/tests/check-architecture.test.mjs",
     "build:shared": "npm run build --workspace @spotcheck/shared",
     "test:m3": "npm run test --workspace @spotcheck/frontend",
     "start:frontend": "npm run start --workspace @spotcheck/frontend",
-    "setup": "node scripts/prepare-env.mjs && npm run build:shared",
+    "setup": "node scripts/prepare-env.mjs && npm run db:generate && npm run build:shared",
     "test:m4": "node scripts/smoke-deployment.mjs",
     "check:residues": "node scripts/check-residues.mjs",
-    "test:r1": "tsx --test frontend/shared/tests/public-config.test.ts && node --test scripts/tests/check-residues.test.mjs",
-    "test:r2": "tsx --test frontend/shared/tests/public-config.test.ts && npm run test:r2 --workspace @spotcheck/frontend",
-    "test:r3": "npm run test:r3 --workspace @spotcheck/frontend",
+    "test:r1": "tsx --test shared/tests/public-config.test.ts && node --test scripts/tests/check-residues.test.mjs && npm run test:r1 --workspace @spotcheck/backend",
+    "test:r2": "tsx --test shared/tests/public-config.test.ts && npm run test:r2 --workspace @spotcheck/frontend && npm run test:r2 --workspace @spotcheck/backend",
+    "test:r3": "npm run test:r3 --workspace @spotcheck/frontend && npm run test:r3 --workspace @spotcheck/backend && npm --prefix proxy test",
     "env:prepare": "node scripts/prepare-env.mjs",
     "docker:up": "node scripts/prepare-env.mjs && docker compose up --build -d",
     "test:r4": "node --test scripts/tests/design-system.test.mjs && node scripts/smoke-deployment.mjs",
-    "build:frontend": "npm run build:shared && npm run build --workspace @spotcheck/frontend"
+    "build:frontend": "npm run build:shared && npm run build --workspace @spotcheck/frontend",
+    "start:backend": "npm run start --workspace @spotcheck/backend",
+    "start:proxy": "npm run start --workspace spotcheck-review-proxy",
+    "build:proxy": "npm run build --workspace spotcheck-review-proxy",
+    "build:backend": "npm run build:shared && npm run build --workspace @spotcheck/backend",
+    "db:generate": "npm run db:generate --workspace @spotcheck/backend",
+    "db:migrate": "npm run db:migrate --workspace @spotcheck/backend",
+    "db:studio": "npm run db:studio --workspace @spotcheck/backend",
+    "test:m2": "npm run test --workspace @spotcheck/backend"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -35,8 +43,10 @@
     "typescript": "^5"
   },
   "workspaces": [
+    "backend",
     "frontend",
-    "frontend/shared"
+    "shared",
+    "proxy"
   ],
   "engines": {
     "node": ">=22"

@@ -12,7 +12,7 @@ const normalize = (value) => value.split(path.sep).join('/');
 
 export function inspectSource(filename, text, root) {
   const errors = [];
-  const relative = normalize(path.relative(root, filename)).replace(/^frontend\/shared\//, 'shared/');
+  const relative = normalize(path.relative(root, filename));
   const app = relative.split('/')[0];
   const production = !relative.includes('/tests/');
   const sourceLayer = relative.match(/^(backend|frontend)\/src\/([^/]+)\//)?.[2];
@@ -28,7 +28,7 @@ export function inspectSource(filename, text, root) {
     if (specifier.startsWith('@/')) destination = path.resolve(root, app, 'src', specifier.slice(2));
     else if (specifier.startsWith('.')) destination = path.resolve(path.dirname(filename), specifier);
     if (!destination) return;
-    const target = normalize(path.relative(root, destination)).replace(/^frontend\/shared\//, 'shared/');
+    const target = normalize(path.relative(root, destination));
     if (!target.startsWith(`${app}/`) && !target.startsWith('shared/')) { add(node, `Import escapa de su aplicación: ${specifier}`); return; }
     if (app === 'shared' && !target.startsWith('shared/')) add(node, 'Shared no puede importar aplicaciones.');
     const destinationLayer = target.match(/^(backend|frontend)\/src\/([^/]+)(?:\/|$)/)?.[2];

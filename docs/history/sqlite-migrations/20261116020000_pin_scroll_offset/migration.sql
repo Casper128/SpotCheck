@@ -1,0 +1,2 @@
+ALTER TABLE "Pin" ADD COLUMN "scrollX" REAL;
+ALTER TABLE "Pin" ADD COLUMN "scrollY" REAL;
